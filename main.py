@@ -2,9 +2,10 @@ import argparse
 from datetime import datetime, timedelta
 import logging
 import sys
+import os
 
 import requests
-import twitter
+# import twitter
 
 from secrets import twitter_credentials
 
@@ -24,15 +25,25 @@ TTP_TIME_FORMAT = '%Y-%m-%dT%H:%M'
 NOTIF_MESSAGE = 'New appointment slot open at {location}: {date}'
 MESSAGE_TIME_FORMAT = '%A, %B %d, %Y at %I:%M %p'
 
-def tweet(message):
-    api = twitter.Api(**twitter_credentials)
+# Send notification message to OS X Notification Center
+def notify(message):
     try:
-        api.PostUpdate(message)
-    except twitter.TwitterError as e:
-        if len(e.message) == 1 and e.message[0]['code'] == 187:
-            logging.info('Tweet rejected (duplicate status)')
-        else:
-            raise
+        os.system("""
+                osascript -e 'display notification "{}" with title "TTP Notifier"'
+                """.format(message))
+    except:
+        logging.exception('Could not send notification')
+
+# Old tweet function, can uncomment if you want to use it 
+# def tweet(message):
+#     api = twitter.Api(**twitter_credentials)
+#     try:
+#         api.PostUpdate(message)
+#     except twitter.TwitterError as e:
+#         if len(e.message) == 1 and e.message[0]['code'] == 187:
+#             logging.info('Tweet rejected (duplicate status)')
+#         else:
+#             raise
 
 def check_for_openings(location_name, location_code, test_mode=True):
     start = datetime.now()
@@ -57,8 +68,13 @@ def check_for_openings(location_name, location_code, test_mode=True):
             if test_mode:
                 print(message)
             else:
-                logging.info('Tweeting: ' + message)
-                tweet(message)
+                logging.info('Notifying: ' + message)
+
+                # Send notification to OS X Notification Center
+                notify(message)
+                
+                # Uncomment to tweet as wellBigSwept5211@mcqueen.io
+                # tweet(message)
             return  # Halt on first match
 
     logging.info('No openings for {}'.format(location_name))
